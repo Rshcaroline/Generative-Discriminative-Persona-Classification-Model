@@ -77,4 +77,4 @@ Or create a virtual env and use  `pip install -r requirements.txt`  to install t
 ## Partners
 
 - [AuCson](https://github.com/AuCson)
-- [RshCaroline](https://github.com/Rshcaroline)
+- [Aaron He](https://github.com/AaronHeee)
