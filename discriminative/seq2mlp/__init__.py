@@ -1,0 +1,5 @@
+# src_field_name = 'src'
+tgt_field_name = 'tgt'
+spk_field_name = 'A'
+# src_spk_field_name = 'A'
+tgt_spk_field_name = 'B'
