@@ -3,6 +3,7 @@ import argparse
 import logging
 
 import torch
+import numpy as np
 from torch import optim
 from seq2mlp.trainer import SupervisedTrainer
 from seq2mlp.models import EncoderRNN,  MLP, Seq2MLP_cr
@@ -11,6 +12,7 @@ from seq2mlp.dataset import TargetField, SourceField, SpeakerField, SpeakerDatas
 from seq2mlp.evaluator import Predictor
 from seq2mlp.util.checkpoint import Checkpoint
 from seq2mlp.optim import Optimizer
+
 
 from torchtext.data.dataset import TabularDataset
 
@@ -27,16 +29,16 @@ parser = argparse.ArgumentParser()
 # load data
 parser.add_argument('--path', default='../data/',
                     help='Input data path.')
-parser.add_argument('--num_sentence', type=int, default=4,
+parser.add_argument('--num_sentence', type=int, default=2,
                     help='Number of sentences in every dialog')
 parser.add_argument('--format', default='csv',
                     help='The format of data file.')
 
-parser.add_argument('--train_data', default="bt_aug_clip_train4.csv",
+parser.add_argument('--train_data', default="train.csv",  # bt_aug_clip_train4.csv
                     help='Input train data filename.')
-parser.add_argument('--dev_data', default="bt_aug_clip_dev4.csv",
+parser.add_argument('--dev_data', default="dev.csv",   # bt_aug_clip_dev4.csv
                     help='Input dev data filename.')
-parser.add_argument('--test_data', default="bt_aug_clip_test4.csv",
+parser.add_argument('--test_data', default="test.csv",  # bt_aug_clip_test4.csv
                     help='Input test data filename.')
 
 # load model
@@ -52,7 +54,7 @@ parser.add_argument('--max_len', type=int, default=150,
                     help='Choose max_len of Encoder')
 parser.add_argument('--hidden_size', type=int, default=100,
                     help='Choose the hidden size')
-parser.add_argument('--num_speaker', type=int, default=7,  # only seven main roles
+parser.add_argument('--num_speaker', type=int, default=6,  # only six emotion
                     help='Choose the speaker size')
 parser.add_argument('--layer_size', type=int, default=[256, 128],
                     help='Choose the layer size')
@@ -65,7 +67,7 @@ parser.add_argument('--lr', type=float, default=0.05,
                     help='Choose the learning rate')
 parser.add_argument('--batch_size', type=int, default=32,
                     help='Choose the batch_size tuple for (train, valid, test)')
-parser.add_argument('--epochs', type=int, default=30,
+parser.add_argument('--epochs', type=int, default=100,
                     help='Choose the number of epochs')
 parser.add_argument('--num_steps', type=int, default=48,
                     help='Choose the num steps')
@@ -97,7 +99,7 @@ parser.add_argument('--load_checkpoint', action='store', dest='load_checkpoint',
 args = parser.parse_args()
 args.cuda = args.cuda & torch.cuda.is_available()
 if args.cuda:
-    torch.cuda.set_device(3)
+    torch.cuda.set_device(1)
 
 ############  define some tools  ##############
 
@@ -146,13 +148,13 @@ def init_model():
                   num_classes = args.num_speaker)
 
         model = Seq2MLP_cr(encoder_c, encoder_r, mlp)
-        print model
+        print(model)
         if args.cuda:
             model.cuda()
 
-        # initialize the weights
-        for param in model.parameters():
-            param.data.uniform_(-0.08, 0.08)
+        # # initialize the weights
+        # for param in model.parameters():
+        #     param.data.uniform_(-0.08, 0.08)
 
     return model, input_vocab, output_vocab
 
@@ -183,7 +185,7 @@ train, dev, test = TabularDataset.splits(format=args.format,
                                          validation=args.dev_data,
                                          test=args.test_data)
 
-SpeakerDataset.concat(args.num_sentence, (train, dev, test))
+# SpeakerDataset.concat(args.num_sentence, (train, dev, test), inverse=True)
 
 
 ################  define model ##################
@@ -192,8 +194,8 @@ model, input_vocab, output_vocab = init_model()
 
 # Prepare loss
 weight = torch.ones(len(output_vocab))
-pad = input_vocab.stoi[spk.pad_token]
-loss = NLLLoss(weight, pad)  # Q: what is pad?
+# print(len(output_vocab))
+loss = NLLLoss(weight)  # Q: what is pad?
 if args.cuda:
     loss.cuda()
 
@@ -209,7 +211,7 @@ t = SupervisedTrainer(args = args,
                       expt_dir=args.expt_dir
                       )
 
-print "evaluate before training:"
+print("evaluate before training:")
 t.evaluator.evaluate(model, train)
 t.evaluator.evaluate(model, dev)
 

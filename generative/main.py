@@ -2,9 +2,11 @@ import os
 import argparse
 import logging
 
+import numpy as np
+
 import torch
 from torch import optim
-
+from torch.autograd import Variable
 from seq2seq.trainer import SpkTrainer
 from seq2seq.models import EncoderRNN, DecoderRNN, Seq2seq, SpkSeq2seq, SpkDecoderRNN
 from seq2seq.loss import Perplexity
@@ -29,18 +31,18 @@ parser = argparse.ArgumentParser()
 # load data
 parser.add_argument('--path', default='../data/',
                     help='Input data path.')
-parser.add_argument('--num_sentence', type=int, default=4,
+parser.add_argument('--num_sentence', type=int, default=2,
                     help='Number of sentences in every dialog')
 parser.add_argument('--format', default='csv',
                     help='The format of data file.')
 
 
-parser.add_argument('--train_data', default="bt_aug_clip_train4.csv",
+parser.add_argument('--train_data', default="train.csv",  # bt_aug_clip_train4.csv
                     help='Input train data filename.')
-parser.add_argument('--dev_data', default="bt_aug_clip_dev4.csv",
+parser.add_argument('--dev_data', default="dev.csv",   # bt_aug_clip_dev4.csv
                     help='Input dev data filename.')
-parser.add_argument('--test_data', default="bt_aug_clip_test4.csv",
-                    help='Input train data filename.')
+parser.add_argument('--test_data', default="test.csv",  # bt_aug_clip_test4.csv
+                    help='Input test data filename.')
 
 # load model
 parser.add_argument('--encoder', default='EncoderRNN',
@@ -51,11 +53,13 @@ parser.add_argument('--bidirectional', type=bool, default=True,
                     help='Use bidirectional or not')
 parser.add_argument('--embedding', type=int, default=0,
                     help='Use bidirectional or not')
+parser.add_argument('--spk_embedding', type=int, default=0,
+                    help='Use pretrained speaker embedding or not')
 parser.add_argument('--max_len', type=int, default=150,
                     help='Choose max_len of Encoder')
 parser.add_argument('--hidden_size', type=int, default=100,
                     help='Choose the hidden size')
-parser.add_argument('--num_spk', type=int, default=7,  # only six main roles
+parser.add_argument('--num_spk', type=int, default=6,  # only six emotion
                     help='Choose the speaker size')
 parser.add_argument('--spk_embed_size', type=int, default=100,
                     help='Define the vocab size')
@@ -100,7 +104,7 @@ parser.add_argument('--load_checkpoint', action='store', dest='load_checkpoint',
 args = parser.parse_args()
 args.cuda = args.cuda & torch.cuda.is_available()
 if args.cuda:
-    torch.cuda.set_device(3)
+    torch.cuda.set_device(0)
 
 ############  define some tools  ##############
 
@@ -124,6 +128,12 @@ def init_model():
         tgt.build_vocab(train, max_size=args.vocab_size, vectors="glove.6B.100d")
         input_vocab, output_vocab = src.vocab, tgt.vocab
 
+        spk_vectors = None
+        if args.spk_embedding:
+            spk_vectors = torch.FloatTensor(np.load("./.vector_cache/spk_embedding.npy"))
+            if args.cuda:
+                spk_vectors = spk_vectors.cuda()
+
         # Initialize model
         encoder = EncoderRNN(vocab_size=len(input_vocab),
                              max_len=args.max_len,
@@ -138,6 +148,7 @@ def init_model():
                                  spk_embed_size = args.spk_embed_size,
                                  vocab_size=len(output_vocab),
                                  max_len=args.max_len,
+                                 spk_vectors=spk_vectors,
                                  hidden_size=args.hidden_size * 2 if args.bidirectional else args.hidden_size,
                                  dropout_p=args.dropout_p,
                                  input_dropout_p=args.input_dropout_p,
@@ -192,7 +203,7 @@ train, dev, test = TabularDataset.splits(format=args.format,
                                          validation=args.dev_data,
                                          test=args.test_data)
 
-SpeakerDataset.concat(args.num_sentence, (train, dev, test))
+SpeakerDataset.concat(args.num_sentence, (train, dev, test), inverse=True)
 
 ################  define model ##################
 

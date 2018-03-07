@@ -8,7 +8,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 
 from .attention import Attention
-from DecoderRNN import DecoderRNN
+from .DecoderRNN import DecoderRNN
 
 if torch.cuda.is_available():
     import torch.cuda as device
@@ -41,7 +41,7 @@ class SpkDecoderRNN(DecoderRNN):
         embedded_var = self.embedding(input_var)
         # cat
         if not(embedded_var.size(0) == embedded_spk.size(0) and embedded_var.size(1) == embedded_spk.size(1)):
-            print "a"
+            print("a")
         embedded = torch.cat((embedded_spk, embedded_var), 2)
         embedded = self.input_dropout(embedded)
 

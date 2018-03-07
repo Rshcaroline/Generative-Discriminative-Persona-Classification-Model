@@ -4,21 +4,31 @@ import numpy as np
 
 import torch
 import torch.nn as nn
+
 from torch.autograd import Variable
 import torch.nn.functional as F
+from torch.nn.modules.sparse import Parameter, Embedding
 
 from .attention import Attention
-from DecoderRNN import DecoderRNN
+from .DecoderRNN import DecoderRNN
 
 if torch.cuda.is_available():
     import torch.cuda as device
 else:
     import torch as device
 
+class EncoderEmbedding(Embedding):
+    def __init__(self, num_embeddings, embedding_dim, vectors, padding_idx=None,
+                 max_norm=None, norm_type=2, scale_grad_by_freq=False,
+                 sparse=False):
+        super(EncoderEmbedding, self).__init__(num_embeddings, embedding_dim)
+        self.weight = Parameter(vectors)
+
+
 class SpkDecoderRNN(DecoderRNN):
     def __init__(self, num_spk, spk_embed_size,
                  vocab_size, max_len, hidden_size,
-                 sos_id, eos_id, word_embed_size=None, vectors=None,
+                 sos_id, eos_id, spk_vectors=None, word_embed_size=None, vectors=None,
                  n_layers=1, rnn_cell='gru', bidirectional=False,
                  input_dropout_p=0, dropout_p=0, use_attention=False):
         word_embed_size = hidden_size + spk_embed_size
@@ -26,10 +36,17 @@ class SpkDecoderRNN(DecoderRNN):
                                             sos_id, eos_id, word_embed_size=word_embed_size, vectors=vectors,
                                             n_layers=n_layers, rnn_cell=rnn_cell, bidirectional=bidirectional,
                                             input_dropout_p=input_dropout_p, dropout_p=dropout_p, use_attention=use_attention)
-        self.spk_embedding = nn.Embedding(
-            num_embeddings=num_spk,
-            embedding_dim=spk_embed_size
-        )
+        if spk_vectors is None:
+            self.spk_embedding = nn.Embedding(
+                num_embeddings=num_spk,
+                embedding_dim=spk_embed_size
+            )
+        else:
+            self.spk_embedding = EncoderEmbedding(
+                num_embeddings=spk_vectors.size(0),
+                embedding_dim=spk_vectors.size(1),
+                vectors=spk_vectors
+            )
 
 
     def forward_step(self, input_spk, input_var, hidden, encoder_outputs, function):
@@ -41,7 +58,7 @@ class SpkDecoderRNN(DecoderRNN):
         embedded_var = self.embedding(input_var)
         # cat
         if not(embedded_var.size(0) == embedded_spk.size(0) and embedded_var.size(1) == embedded_spk.size(1)):
-            print "a"
+            print("a")
         embedded = torch.cat((embedded_spk, embedded_var), 2)
         embedded = self.input_dropout(embedded)
 

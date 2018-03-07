@@ -158,8 +158,8 @@ if __name__ == "__main__":
 
     # use the iter every batch
     for i in train_batchiter:
-        print i.A
-        print i.text
-        print i.B
-        print i.Response
+        print(i.A)
+        print(i.text)
+        print(i.B)
+        print(i.Response)
         break

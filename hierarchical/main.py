@@ -36,12 +36,13 @@ parser.add_argument('--num_sentence', type=int, default=2,
 parser.add_argument('--format', default='csv',
                     help='The format of data file.')
 
-parser.add_argument('--train_data', default="bt_aug_clip_train4.csv",
+parser.add_argument('--train_data', default="train.csv",  # bt_aug_clip_train4.csv
                     help='Input train data filename.')
-parser.add_argument('--dev_data', default="bt_aug_clip_dev4.csv",
+parser.add_argument('--dev_data', default="dev.csv",   # bt_aug_clip_dev4.csv
                     help='Input dev data filename.')
-parser.add_argument('--test_data', default="bt_aug_clip_test4.csv",
+parser.add_argument('--test_data', default="test.csv",  # bt_aug_clip_test4.csv
                     help='Input test data filename.')
+
 # load model
 parser.add_argument('--encoder', default='EncoderRNN',
                     help='Choose Encoder')
@@ -55,7 +56,7 @@ parser.add_argument('--max_len', type=int, default=150,
                     help='Choose max_len of Encoder')
 parser.add_argument('--hidden_size', type=int, default=300,
                     help='Choose the hidden size')
-parser.add_argument('--num_spk', type=int, default=7,  # only six main roles
+parser.add_argument('--num_spk', type=int, default=6,  # only six emotion
                     help='Choose the speaker size')
 parser.add_argument('--spk_embed_size', type=int, default=100,
                     help='Define the vocab size')
@@ -177,7 +178,7 @@ spk = SpeakerField()
 tgt = TargetField()
 
 # load the dataset
-fields = [('0', spk), ('src0', src), ('1', spk), ('src1', src), ('2', spk), ('src2', src), ('3', spk), ('tgt', tgt)]
+fields = [('0', spk), ('src0', src), ('1', spk), ('tgt', src)]
 
 train, dev, test = TabularDataset.splits(format=args.format,
                                          path=args.path,

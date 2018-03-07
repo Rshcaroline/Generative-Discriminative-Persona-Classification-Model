@@ -82,17 +82,19 @@ class SpeakerDataset(TabularDataset):
 
     # TODO: setattr()
     @staticmethod
-    def concat(num, datasets, mode = "t"):
+    def concat(num, datasets, mode = "t", inverse=False):
         # concat data of **fields**  eg. ('src1', 'src2', 'src3')
         # output as data of output_field  eg. 'src1'  (must be one of fields above)
-        if (mode == "t" and num == 1) or (mode=="cr" and num == 2):
+        if not inverse and ((mode == "t" and num == 1) or (mode=="cr" and num == 2)):
             return
-        count = num - 2 if mode == "t" else num - 3
 
+        count = num - 2 if mode == "t" else num - 3
         for dataset in datasets:
             for eg in dataset:
+                if inverse:
+                    eg.src = eg.src[::-1]
                 for i in range(count):
-                    eg.src += getattr(eg, "src"+str(i))
+                    eg.src += getattr(eg, "src"+str(i))[::-1] if inverse else getattr(eg, "src"+str(i))
 
 
 #######################################################################################
@@ -160,8 +162,8 @@ if __name__ == "__main__":
 
     # use the iter every batch
     for i in train_batchiter:
-        print i.A
-        print i.text
-        print i.B
-        print i.Response
+        print(i.A)
+        print(i.text)
+        print(i.B)
+        print(i.Response)
         break
